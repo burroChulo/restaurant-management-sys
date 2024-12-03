@@ -9,6 +9,7 @@ import tkinter.ttk as ttk
 #from tkmacosx import Button
 from PIL import Image, ImageTk
 
+
 def new_id():
     conn = sqlite3.connect("z_employees.db")
     cursor = conn.cursor()
