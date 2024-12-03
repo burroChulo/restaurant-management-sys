@@ -266,13 +266,13 @@ def host_hompage():
                       text=f"Welcome, {sexyUserFName}",
                       font=("Inter", 30, "bold"), 
                       bg="white", fg="black")
-    header.place(relx = 0.1, rely = 0.22)
+    header.place(relx = 0.1, rely = 0.23)
 
     subHeader = tk.Label(host, 
                       text="End Job",
                       font=("Inter", 30, "bold"), 
                       bg="white", fg="black")
-    subHeader.place(relx = 0.225, rely = 0.39)
+    subHeader.place(relx = 0.215, rely = 0.39)
 
     signoutButton = tk.Button(host, 
                               image = home_signOutButt, 
@@ -295,7 +295,7 @@ def tables():
 
     back_button = tk.Button(tables, 
                             image=backButt, 
-                            bg="#CC5576", 
+                            bg="#FEB5C9", 
                             highlightthickness = 0, bd = 0, 
                             command= lambda: [host_hompage(), tables.withdraw()])
     back_button.place(relx=0.06, rely=0.05, anchor= 'center')
@@ -321,22 +321,22 @@ def tables():
 
         info = tk.Label(overlayer,
                         text=f"{item[0]}:\nTable {tableNumbers}\n\nDo you wish to toggle?",
-                        font=('Didot', 48),
+                        font=('Didot', 45),
                         bg ="#FFE2EA", fg = "black")
                         
-        info.place(relx=0.225, rely=0.15)
+        info.place(relx=0.2, rely=0.15)
 
         yes = tk.Button(overlayer,
                         image=t_yes,
                         bg ="#FFE2EA", highlightthickness=0, takefocus=0, bd=0, 
                         command = lambda: [new_order(tableNumbers), overlayer.destroy()])
-        yes.place(relx=0.4, rely=0.55)
+        yes.place(relx=0.375, rely=0.575)
         
         no = tk.Button(overlayer,
                         image=t_no,
                         bg ="#FFE2EA", highlightthickness=0, takefocus=0, bd=0, 
                         command = lambda: [overlayer.destroy(), update_table(tableNumbers)] )                 
-        no.place(relx=0.4, rely=0.7)
+        no.place(relx=0.375, rely=0.725)
 
 
 
@@ -480,13 +480,13 @@ def waiter_hompage():
                       text=f"Welcome, {sexyUserFName}",
                       font=("Inter", 30, "bold"), 
                       bg="white", fg="black")
-    header.place(relx = 0.1, rely = 0.22)
+    header.place(relx = 0.1, rely = 0.23)
 
     subHeader = tk.Label(waiter, 
                       text="End Job",
                       font=("Inter", 30, "bold"), 
                       bg="white", fg="black")
-    subHeader.place(relx = 0.225, rely = 0.39)
+    subHeader.place(relx = 0.215, rely = 0.39)
 
     signoutButton = tk.Button(waiter, 
                               image = home_signOutButt, 
@@ -936,12 +936,18 @@ def orderHub():
                 sexysexyOrder = len(listofOrders)-1
         
         title = f"Table{sexysexyOrderNum}.txt"
-        orderInfo = []
-        with open(f"{title}", "r", newline='') as file:
+
+        actualOrders = tk.StringVar()
+        with open(f"{title}", "r") as file:
             start = csv.reader(file)
-            for rows in range[1:]:
-                orderInfo.append(rows)
-                print(orderInfo)
+            orderInfo = []
+            for rows in start:
+                if "AM" in rows or "PM" in rows:
+                    pass
+                else:
+                    orderInfo.append(rows)
+                    print(orderInfo)
+                    actualOrders.set(f"Table {sexysexyOrderNum}'s Order:")
 
             
                 
@@ -1144,14 +1150,14 @@ def job_select():
                      image = start_host, 
                      bg="#FFE2EA", highlightthickness=0, bd=0, 
                      command = lambda: [host_hompage(), ss.withdraw()])
-    host.place(relx = 0.329, rely = 0.3 )
+    host.place(relx = 0.34, rely = 0.3 )
     
     waiter = tk.Button(ss, 
                        image = start_waiter, 
                        bg="#FFE2EA", 
                        highlightthickness=0, bd=0, 
                        command = lambda: [waiter_hompage(), ss.withdraw()])
-    waiter.place(relx = 0.329, rely = 0.6 )
+    waiter.place(relx = 0.34, rely = 0.6 )
 
 def signInn():
     Start = tk.Toplevel(root)
