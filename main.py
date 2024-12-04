@@ -108,6 +108,9 @@ def new_order(number):
     title = "Table" + str(number)
     timeZone = datetime.now(timezone("America/New_York"))
     time = timeZone.strftime("%I:%M %p")
+    
+    date_object = datetime.datetime.now()
+    f_date = date_object.strftime("%m-%d-%Y")
 
     file_path = f"{title}.txt"
 
@@ -119,7 +122,7 @@ def new_order(number):
 
     else:
         passReveal = open(file_path, "w")
-        passReveal.write(f"{time}\n")
+        passReveal.write(f"{f_date}\n{time}\n")
         passReveal.close()
 
 def update_order(tableNum, itemNum, quant):
@@ -192,7 +195,7 @@ def finishing_order(tableNum, debitOrCash):
     c.commit()
     c.close()
 
-    newInfoo = (newid, orderInfo[1][0], 1, "12-4-24", orderInfo[0][0], orderInfo[-1][0], "PAID")
+    newInfoo = (newid, orderInfo[2][0], 1, orderInfo[0][0], orderInfo[1][0], orderInfo[-1][0], "PAID")
     conn = sqlite3.connect("z_resters.db")
     cursor = conn.cursor()
     cursor.executemany("""
@@ -217,7 +220,7 @@ def finishing_order(tableNum, debitOrCash):
     with open('rev.txt', 'r') as grades_reader:
         for row in grades_reader:
             revenue = row.split()
-
+    os.remove(f"Table{tableNum}.txt")
 
 
 def boss_hompage():
@@ -1246,7 +1249,7 @@ def orderHub():
             start = csv.reader(file)  
             for rows in start:
                 for infoInRows in rows:
-                    if "AM" in infoInRows or "PM" in infoInRows:
+                    if "-" in infoInRows or "AM" in infoInRows or "PM" in infoInRows:
                         pass
                     else:
                         orderInfo.append(rows)
