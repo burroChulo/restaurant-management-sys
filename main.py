@@ -109,7 +109,7 @@ def new_order(number):
     timeZone = datetime.now(timezone("America/New_York"))
     time = timeZone.strftime("%I:%M %p")
     
-    date_object = datetime.datetime.now()
+    date_object = datetime.now()
     f_date = date_object.strftime("%m-%d-%Y")
 
     file_path = f"{title}.txt"
@@ -141,6 +141,7 @@ def update_order(tableNum, itemNum, quant):
         start.writerow(newInfo)
 
 def translate_order(cryptic):
+    print(1234, cryptic)
     itemNameC = cryptic[1]
 
     peep = sqlite3.connect("z_resters.db")
@@ -168,6 +169,14 @@ def find_total(wholeCryptic):
 def finishing_order(tableNum, debitOrCash):
     global revenue
 
+    orderInfo = []
+    with open(f"Table{tableNum}.txt", "r") as file:
+            start = csv.reader(file)  
+            for rows in start:
+                orderInfo.append(rows)
+    print(orderInfo)
+
+    newInfo = []
     if debitOrCash == 1:
         newInfo = [ "Credit/Debit" ]
     else:
@@ -178,24 +187,18 @@ def finishing_order(tableNum, debitOrCash):
             start.writerow(newInfo)
             pass
 
-    orderInfo = []
-    with open(f"Table{tableNum}.txt", "r") as file:
-            start = csv.reader(file)  
-            for rows in start:
-                orderInfo.append(rows)
-    print(orderInfo)
-
     c = sqlite3.connect("z_resters.db")
     curse = c.cursor()
     curse.execute("SELECT order_id FROM receipts ORDER BY order_id DESC LIMIT 1")
     
-    student = cursor.fetchone()
+    student = curse.fetchone()
     number = student[0]
     newid = int(number) + 1
     c.commit()
     c.close()
 
-    newInfoo = (newid, orderInfo[2][0], 1, orderInfo[0][0], orderInfo[1][0], orderInfo[-1][0], "PAID")
+    newInfoo = (newid, orderInfo[2][0], 1, orderInfo[0][0], orderInfo[1][0], newInfo[0], "PAID")
+    print("plop", newInfoo)
     conn = sqlite3.connect("z_resters.db")
     cursor = conn.cursor()
     cursor.executemany("""
@@ -205,6 +208,7 @@ def finishing_order(tableNum, debitOrCash):
     conn.commit()
     conn.close()
 
+    update_table(tableNum)
 
     with open('rev.txt', 'w') as f:
         conn = sqlite3.connect("z_resters.db")
@@ -220,19 +224,28 @@ def finishing_order(tableNum, debitOrCash):
     with open('rev.txt', 'r') as grades_reader:
         for row in grades_reader:
             revenue = row.split()
+    
     os.remove(f"Table{tableNum}.txt")
+    
+    global sexysexyOrderNum
+    global sexysexyOrder
+    sexysexyOrderNum = 0
+    sexysexyOrder = 0
+    update_list_of_orders()
+    
 
 
 def boss_hompage():
     boss = tk.Toplevel(root)
     boss.geometry("1488x945")
+    boss.resizable(width=False, height=False)
     s = tk.Label(boss, image=b_hub).pack()
 
     header = tk.Label(boss, 
                       text="BOSS",
                       font=('Didot', 48), 
                       bg="#ED3266", fg="white")
-    header.place(relx = 0.44, rely = 0.01)
+    header.place(relx = 0.44, rely = 0.02)
 
     signoutButton = tk.Button(boss, 
                               image = b_signOut, 
@@ -258,6 +271,7 @@ def boss_hompage():
 def revenue():
     boss = tk.Toplevel(root)
     boss.geometry("1488x945")
+    boss.resizable(width=False, height=False)
     s = tk.Label(boss, image=b_hub).pack()
 
     back_button = tk.Button(boss, 
@@ -293,6 +307,7 @@ def revenue():
 def signUp():
     signUpPage = tk.Toplevel(root)
     signUpPage.geometry("1488x945")
+    signUpPage.resizable(width=False, height=False)
     
     s = tk.Label(signUpPage, image=s_l_page).pack()
     
@@ -407,6 +422,7 @@ def signUp():
 def host_hompage():
     host = tk.Toplevel(root)
     host.geometry("1488x945")
+    host.resizable(width=False, height=False)
     s = tk.Label(host, image=host_homepage).pack()
 
     header = tk.Label(host, 
@@ -438,6 +454,7 @@ def host_hompage():
 def tables():
     tables = tk.Toplevel(root)
     tables.geometry("1488x945")
+    tables.resizable(width=False, height=False)
     s = tk.Label(tables, image=t_hub).pack()
 
     back_button = tk.Button(tables, 
@@ -733,6 +750,7 @@ def tables():
 def waiter_hompage():
     waiter = tk.Toplevel(root)
     waiter.geometry("1488x945")
+    waiter.resizable(width=False, height=False)
     s = tk.Label(waiter, image=waiter_homepage).pack()
 
     header = tk.Label(waiter, 
@@ -771,6 +789,7 @@ def waiter_hompage():
 def menuHub():
     menu = tk.Toplevel(root)
     menu.geometry("1488x945")
+    menu.resizable(width=False, height=False)
     s = tk.Label(menu, image=m_hub).pack()
 
     back_button = tk.Button(menu, 
@@ -824,6 +843,7 @@ def menuHub():
 def menus(typo):
     menu = tk.Toplevel(root)
     menu.geometry("1488x945")
+    menu.resizable(width=False, height=False)
     s = tk.Label(menu, image=m_hub).pack()
 
     back_button = tk.Button(menu, 
@@ -848,7 +868,7 @@ def menus(typo):
         info = tk.Label(overlayer,
                         text=f"Add to Order          :",
                         font=('Didot', 48),
-                        bg ="#FFE2EA", fg = "white")                
+                        bg ="#FFE2EA", fg = "black")                
         info.place(relx=0.225, rely=0.15)
 
         clicked = tk.StringVar() 
@@ -1166,6 +1186,7 @@ def menus(typo):
 def orderHub():
     order = tk.Toplevel(root)
     order.geometry("1488x945")    
+    order.resizable(width=False, height=False)
     s = tk.Label(order, image=o_hub).pack()
 
     v = tk.StringVar()
@@ -1244,6 +1265,7 @@ def orderHub():
                 sexysexyOrder = len(listofOrders)-1
         
         title = f"Table{sexysexyOrderNum}.txt"
+        
         orderInfo = []
         with open(f"{title}", "r") as file:
             start = csv.reader(file)  
@@ -1253,12 +1275,12 @@ def orderHub():
                         pass
                     else:
                         orderInfo.append(rows)
-                        print(orderInfo)
+                        print("orderHub", orderInfo)
                         break
         for i in range(0,len(orderInfo)):
             newLine = translate_order(orderInfo[i])
             append_to_var(newLine)
-            canvas.create_text(50, 50, 
+            canvas.create_text(30, 50, 
                        text=plumpItems,
                        font=("Inter", 30), 
                        anchor='nw', 
@@ -1312,6 +1334,7 @@ def orderHub():
 def tips():
     tips = tk.Toplevel(root)
     tips.geometry("1488x945")
+    tips.resizable(width=False, height=False)
     s = tk.Label(tips, image=tip_hub).pack()
 
     back_button = tk.Button(tips, 
@@ -1357,6 +1380,7 @@ def tips():
 def customTips():
     tips = tk.Toplevel(root)
     tips.geometry("1488x945")
+    tips.resizable(width=False, height=False)
     s = tk.Label(tips, image=tip_hub).pack()
 
     header = tk.Label(tips, 
@@ -1401,6 +1425,7 @@ def purchaseComplete():
 def job_select():
     ss = tk.Toplevel(root)
     ss.geometry("1488x945")
+    ss.resizable(width=False, height=False)
     
     s = tk.Label(ss, image=start).pack()
     
@@ -1420,6 +1445,7 @@ def job_select():
 def signInn():
     Start = tk.Toplevel(root)
     Start.geometry("1488x945")
+    Start.resizable(width=False, height=False)
     
     s = tk.Label(Start, image=s_l_page).pack()
 
@@ -1490,6 +1516,8 @@ def signInn():
 root = tk.Tk()
 root.geometry("1488x945")
 root.configure(bg ="magenta")
+root.resizable(width=False, height=False)
+
 
 splashBG = tk.PhotoImage(file = "splash_screen.png")
 splashLabel=tk.Label(root, image=splashBG).pack()
