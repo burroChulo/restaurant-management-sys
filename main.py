@@ -9,9 +9,47 @@ import tkinter.ttk as ttk
 #from tkmacosx import Button
 from PIL import Image, ImageTk
 
+# basic backend
+def checkEmail(email):
+    startRange = None
+    email = email.lower()
+    for i in range(0, len(email)):
+        if email[i] == "@":
+            startRange = i
+            break
+    if startRange == None:
+        return False
+    else: 
+        if "." in email[startRange:]:
+            return True
+        else:
+            return False
 
+def checkPassword(password):
+    listOfCharacters = ["#","$","%","_","!","?","*","-","(",")","=","+","&",".",",",">","<","/",":",";"]
+    isPassword = None
+    if len(password) >= 8:    
+        for characters in password: 
+            if characters == characters.upper(): 
+                isPassword = True
+                break
+            else:
+                isPassword = False
+        for characters in password: 
+            if characters in listOfCharacters: 
+                isPassword = True
+                break
+            else:
+                isPassword = False
+    else: 
+        isPassword = False
+    
+    return isPassword
+
+
+# DB management
 def new_id():
-    conn = sqlite3.connect("z_employees.db")
+    conn = sqlite3.connect("z_resters.db")
     cursor = conn.cursor()
     cursor.execute("SELECT emp_id FROM employees ORDER BY emp_id DESC LIMIT 1")
     
@@ -21,15 +59,41 @@ def new_id():
     
     return newid
 
+def update_list_of_orders():
+    global listofOrders
+    global sexysexyOrderNum
+    global sexysexyOrder
+
+    listofOrders = []
+
+    peep = sqlite3.connect("z_resters.db")
+    purp = peep.cursor()
+    purp.execute("SELECT available FROM tables")
+
+    slurs = purp.fetchall()
+    for checker in range(0, len(slurs)):
+        if "UNAVAILABLE" in slurs[checker][0]:
+            listofOrders.append(checker+1)
+    peep.commit()
+    peep.close()
+
+    try:
+        sexysexyOrderNum = listofOrders[0]
+        sexysexyOrder = 0
+    except:
+        print("file is empty")
+    
+    print(listofOrders)
+
 def update_table(number):
     #check availability
-    check = sqlite3.connect("z_tables.db")
+    check = sqlite3.connect("z_resters.db")
     cursor = check.cursor()
     cursor.execute("SELECT available FROM tables WHERE table_number = ?", (number,))
 
     item = cursor.fetchone()
 
-    update = sqlite3.connect("z_tables.db")
+    update = sqlite3.connect("z_resters.db")
     uCursor = update.cursor()
     if item[0] == "AVAILABLE":
         uCursor.execute("UPDATE tables SET available = ? WHERE table_number = ?", ("UNAVAILABLE", number,))
@@ -37,6 +101,8 @@ def update_table(number):
         uCursor.execute("UPDATE tables SET available = ? WHERE table_number = ?", ("AVAILABLE", number,))
     update.commit()
     update.close()
+
+    update_list_of_orders()
 
 def new_order(number):
     title = "Table" + str(number)
@@ -49,41 +115,16 @@ def new_order(number):
 
     if os.path.exists(file_path):
         print("already Exists")
-        with open (f"orders.txt", "r") as f:
-            data=f.readlines()
-            datall =  data[0].split()
-            print(datall)
-            for info in datall:
-                if info != str(number):
-                    poll.append(info)
-                    print(poll)
-        with open (f"{title}.txt", "w") as f:
-            writing = csv.writer(f)
-            writing.writerow(poll)
-            
-
+        os.remove(file_path)
 
     else:
-        passReveal = open(f"{title}.txt", "w")
+        passReveal = open(file_path, "w")
         passReveal.write(f"{time}\n")
         passReveal.close()
 
-        global listofOrders
-        listofOrders = []
-        grades_reader=open('orders.txt', 'r')
-        for row in grades_reader:
-            listofOrders = row.split()
-
-        print(listofOrders)
-
-    with open("orders.txt", "r", newline='') as f:
-        if str(number) not in f: 
-            with open("orders.txt", "a", newline='') as fr:
-                fr.write(f"{number} ")  
-
 def update_order(tableNum, itemNum, quant):
     titke = f"Table{tableNum}.txt"
-    conn = sqlite3.connect("z_items.db")
+    conn = sqlite3.connect("z_resters.db")
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM items WHERE item_id = ?", (itemNum,))
     
@@ -96,16 +137,86 @@ def update_order(tableNum, itemNum, quant):
         start = csv.writer(file)
         start.writerow(newInfo)
 
+def translate_order(cryptic):
+    itemNameC = cryptic[1]
+
+    peep = sqlite3.connect("z_resters.db")
+    purp = peep.cursor()
+    purp.execute("SELECT item_name FROM items where item_id = ?", (itemNameC,))
+
+    iN = purp.fetchone()
+    
+    peep.commit()
+    peep.close()
+    
+    itemName = iN[0]
+    quantity = cryptic[2]
+    totalPrice = cryptic[3]
+
+    finalResult = f"{itemName}   Qty: {quantity}   Total: {totalPrice}"
+    return finalResult
+
+def find_total(wholeCryptic):
+    total = 0.0
+    for item in range(0, len(wholeCryptic)):
+        total += float(wholeCryptic[item][3])
+    return total
+
 def finishing_order(tableNum, debitOrCash):
+    global revenue
+
     if debitOrCash == 1:
         newInfo = [ "Credit/Debit" ]
     else:
         newInfo = [ "Cash" ]
+    
+    with open(f"Table{tableNum}.txt", "a", newline='') as file:
+            start = csv.writer(file)
+            start.writerow(newInfo)
+            pass
 
-    with open(f"Table {tableNum}.txt", "a", newline='') as file:
-        start = csv.writer(file)
-        start.writerow(newInfo)
-        pass
+    orderInfo = []
+    with open(f"Table{tableNum}.txt", "r") as file:
+            start = csv.reader(file)  
+            for rows in start:
+                orderInfo.append(rows)
+    print(orderInfo)
+
+    c = sqlite3.connect("z_resters.db")
+    curse = c.cursor()
+    curse.execute("SELECT order_id FROM receipts ORDER BY order_id DESC LIMIT 1")
+    
+    student = cursor.fetchone()
+    number = student[0]
+    newid = int(number) + 1
+    c.commit()
+    c.close()
+
+    newInfoo = (newid, orderInfo[1][0], 1, "12-4-24", orderInfo[0][0], orderInfo[-1][0], "PAID")
+    conn = sqlite3.connect("z_resters.db")
+    cursor = conn.cursor()
+    cursor.executemany("""
+                       INSERT OR IGNORE INTO receipts (order_id, table_number, emp_id, date, time, payment_type, status) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?)""", 
+                       [newInfoo])
+    conn.commit()
+    conn.close()
+
+
+    with open('rev.txt', 'w') as f:
+        conn = sqlite3.connect("z_resters.db")
+        cursor = conn.cursor()
+        cursor.execute("""SELECT SUM(total) FROM receiptItems""")
+
+        item = cursor.fetchone()
+        print(item[0])
+        f.write(f"{item[0]}")
+
+        conn.commit()
+        conn.close()
+    with open('rev.txt', 'r') as grades_reader:
+        for row in grades_reader:
+            revenue = row.split()
 
 
 
@@ -194,7 +305,6 @@ def signUp():
     password = tk.Label(signUpPage, text="Password:", font=('Didot', 32),fg="black",bg="white")
     password.place(relx = 0.31, rely = 0.6)
 
-
     back_button = tk.Button(signUpPage,
                             image=backButt,
                             bg="#FFE2EA", highlightthickness = 0, bd = 0, 
@@ -223,36 +333,69 @@ def signUp():
     peew.place(relx = 0.435, rely = 0.61)
     
     def adding():
-        empId = new_id()
-        my_list = name.get().split()
-        first = my_list[0]
-        last = my_list[1]
-        emmy = email.get()
-        user = first+last[0]+str(empId)
-        passer = peew.get()
+        if checkEmail(email.get()) == True:
+            emmy = email.get()
+            if checkPassword(peew.get()) == True:
+                passer = peew.get()
 
-        datas = (empId, first, last, emmy, user, passer, 15.0)
+                empId = new_id()
+                my_list = name.get().split()
+                first = my_list[0]
+                last = my_list[1]
+                user = first+last[0]+str(empId)
 
-        conn = sqlite3.connect("z_employees.db")
-        cursor = conn.cursor()
-        cursor.executemany("""
-                        INSERT OR IGNORE INTO employees (emp_id, f_name, l_name, email, username, password, wage) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?)""", 
-                        [datas
-                        ])
-        conn.commit()
-        conn.close()
+                datas = (empId, first, last, emmy, user, passer, 15.0)
 
-        completion = tk.Frame(signUpPage,  
-                              bg ="black",
-                              highlightbackground="#FF88A9", highlightthickness=2)
-        completion.place(relx = 0.3, rely = 0.3)
-        comp = tk.Label(completion,
-                        image=b_signUpComplete)
-        comp.pack()
-        signUpPage.after(750, lambda: [completion.destroy(), boss_hompage(), signUpPage.withdraw()])
+                conn = sqlite3.connect("z_resters.db")
+                cursor = conn.cursor()
+                cursor.executemany("""
+                                INSERT OR IGNORE INTO employees (emp_id, f_name, l_name, email, username, password, wage) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?)""", 
+                                [datas])
+                conn.commit()
+                conn.close()
 
+                completion = tk.Frame(signUpPage,  
+                                    bg ="black",
+                                    highlightbackground="#FF88A9", highlightthickness=2)
+                completion.place(relx = 0.3, rely = 0.3)
+                comp = tk.Label(completion,
+                                image=b_signUpComplete)
+                comp.pack()
+                signUpPage.after(750, lambda: [completion.destroy(), boss_hompage(), signUpPage.withdraw()])
+            else:
+                overlayer = tk.Frame(signUpPage, bg ="#FEB5C9")
+                overlayer.place(relx = 0.2, rely = 0.2)
+                ss = tk.Label(overlayer, image=t_edit).pack()
+                
+                info = tk.Label(overlayer,
+                                text="\nPassword Error",
+                                font=('Didot', 45), bg ="#FFE2EA", fg = "black")
+                            
+                info.place(relx=0.2, rely=0.15)
 
+                yes = tk.Button(overlayer,
+                                image=t_yes,
+                                bg ="#FFE2EA", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [overlayer.destroy()])
+                yes.place(relx=0.375, rely=0.575)
+        else:
+            overlayer = tk.Frame(signUpPage, bg ="#FEB5C9")
+            overlayer.place(relx = 0.2, rely = 0.2)
+            ss = tk.Label(overlayer, image=t_edit).pack()
+
+            info = tk.Label(overlayer,
+                            text="\nEmail Error",
+                            font=('Didot', 45), bg ="#FFE2EA", fg = "black")
+                        
+            info.place(relx=0.2, rely=0.15)
+
+            yes = tk.Button(overlayer,
+                            image=t_yes,
+                            bg ="#FFE2EA", highlightthickness=0, takefocus=0, bd=0, 
+                            command = lambda: [overlayer.destroy()])
+            yes.place(relx=0.375, rely=0.575)
+        
     sUp = tk.Button(signUpPage, image = signUpButt, bg="#FFFFFF", highlightthickness=0, bd=0,
                     command=adding)
     sUp.place(relx = 0.38, rely = 0.7)
@@ -308,13 +451,17 @@ def tables():
 
     def whenClicked(tableNumbers):
         print(tableNumbers)
+
+        global page_one
+        page_one = True
+
         overlayer = tk.Frame(tables,  
                           bg ="#FEB5C9"
                           )
         overlayer.place(relx = 0.2, rely = 0.2)
         ss = tk.Label(overlayer, image=t_edit).pack()
 
-        peep = sqlite3.connect("z_tables.db")
+        peep = sqlite3.connect("z_resters.db")
         purp = peep.cursor()
         purp.execute("SELECT available FROM tables WHERE table_number = ?", (tableNumbers,))
         
@@ -330,7 +477,7 @@ def tables():
         yes = tk.Button(overlayer,
                         image=t_yes,
                         bg ="#FFE2EA", highlightthickness=0, takefocus=0, bd=0, 
-                        command = lambda: [new_order(tableNumbers), overlayer.destroy()])
+                        command = lambda: [new_order(tableNumbers), overlayer.destroy(), changePage()])
         yes.place(relx=0.375, rely=0.575)
         
         no = tk.Button(overlayer,
@@ -340,91 +487,175 @@ def tables():
         no.place(relx=0.375, rely=0.725)
 
 
-
     def changePage():
+        peep = sqlite3.connect("z_resters.db")
+        purp = peep.cursor()
+        purp.execute("SELECT available FROM tables")
+
+        stds = purp.fetchall()
+        print(stds)
+
         global page_one
         if page_one:
             for widget in tableFrame.winfo_children():
                 widget.destroy()
-
-            table1 = tk.Button(tableFrame, 
-                            image = t_1, 
-                            bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
-                            command = lambda: [whenClicked(1), update_table(1)] )
+            
+            if stds[0][0] == "AVAILABLE":
+                table1 = tk.Button(tableFrame, 
+                                image = t_1, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(1), update_table(1)] )
+            else:
+                table1 = tk.Button(tableFrame, 
+                                image = bbt_1, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(1), update_table(1)] )
             table1.place(relx = 0.03, rely = 0)
 
-            table2 = tk.Button(tableFrame, 
-                            image = t_2, 
-                            bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
-                            command = lambda: [whenClicked(2), update_table(2)] )
+            if stds[1][0] == "AVAILABLE":
+                table2 = tk.Button(tableFrame, 
+                                image = t_2, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(2), update_table(2)] )
+            else:
+                table2 = tk.Button(tableFrame, 
+                                image = bbt_2, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(2), update_table(2)] )
             table2.place(relx = 0.21, rely = 0)
 
-            table3 = tk.Button(tableFrame, 
-                            image = t_3, 
-                            bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
-                            command = lambda: [whenClicked(3), update_table(3)] )
+            if stds[2][0] == "AVAILABLE":
+                table3 = tk.Button(tableFrame, 
+                                image = t_3, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(3), update_table(3)] )
+            else:
+                table3 = tk.Button(tableFrame, 
+                                image = bbt_3, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(3), update_table(3)] )
             table3.place(relx = 0.39, rely = 0)
 
-            table4 = tk.Button(tableFrame, 
-                            image = t_4, 
-                            bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
-                            command = lambda: [whenClicked(4), update_table(4)] )
+            if stds[3][0] == "AVAILABLE":
+                table4 = tk.Button(tableFrame, 
+                                image = t_4, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(4), update_table(4)] )
+            else:
+                table4 = tk.Button(tableFrame, 
+                                image = bbt_4, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(4), update_table(4)] )
             table4.place(relx = 0.57, rely = 0)
 
-            table5 = tk.Button(tableFrame, 
-                            image = t_5, 
-                            bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
-                            command = lambda: [whenClicked(5), update_table(5)] )
+            if stds[4][0] == "AVAILABLE":
+                table5 = tk.Button(tableFrame, 
+                                image = t_5, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(5), update_table(5)] )
+            else:
+                table5 = tk.Button(tableFrame, 
+                                image = bbt_5, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(5), update_table(5)] )
             table5.place(relx = 0.75, rely = 0)
 
-            table6 = tk.Button(tableFrame, 
-                            image = t_6, 
-                            bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
-                            command = lambda: [whenClicked(6), update_table(6)] )
+            if stds[5][0] == "AVAILABLE":
+                table6 = tk.Button(tableFrame, 
+                                image = t_6, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(6), update_table(6)] )
+            else:
+                table6 = tk.Button(tableFrame, 
+                                image = bbt_6, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(6), update_table(6)] )
             table6.place(relx = 0.03, rely = 0.3)
 
-            table7 = tk.Button(tableFrame, 
-                            image = t_7, 
-                            bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
-                            command = lambda: [whenClicked(7), update_table(7)] )
+            if stds[6][0] == "AVAILABLE":
+                table7 = tk.Button(tableFrame, 
+                                image = t_7, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(7), update_table(7)] )
+                table7.place(relx = 0.21, rely = 0.3)
+            else:
+                table7 = tk.Button(tableFrame, 
+                                image = bbt_7, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(7), update_table(7)] )
             table7.place(relx = 0.21, rely = 0.3)
 
-            table8 = tk.Button(tableFrame, 
-                            image = t_8, 
+            if stds[7][0] == "AVAILABLE":
+                table8 = tk.Button(tableFrame, 
+                                image = t_8, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(8), update_table(8)] )
+            else:
+                table8 = tk.Button(tableFrame, 
+                            image = bbt_8, 
                             bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
                             command = lambda: [whenClicked(8), update_table(8)] )
             table8.place(relx = 0.39, rely = 0.3)
-
-            table9 = tk.Button(tableFrame, 
-                            image = t_9, 
+            
+            if stds[8][0] == "AVAILABLE":
+                table9 = tk.Button(tableFrame, 
+                                image = t_9, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(9), update_table(9)] )
+            else:
+                table9 = tk.Button(tableFrame, 
+                            image = bbt_9, 
                             bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
                             command = lambda: [whenClicked(9), update_table(9)] )
             table9.place(relx = 0.57, rely = 0.3)
-
-            table10 = tk.Button(tableFrame, 
-                            image = t_10, 
+            
+            if stds[9][0] == "AVAILABLE":
+                table10 = tk.Button(tableFrame, 
+                                image = t_10, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(10), update_table(10)] )
+            else:
+                table10 = tk.Button(tableFrame, 
+                            image = bbt_10, 
                             bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
                             command = lambda: [whenClicked(10), update_table(10)] )
             table10.place(relx = 0.75, rely = 0.3)
 
-            table11 = tk.Button(tableFrame, 
-                            image = t_11, 
+            if stds[10][0] == "AVAILABLE":
+                table11 = tk.Button(tableFrame, 
+                                image = t_11, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(11), update_table(11)] )
+            else:
+                table11 = tk.Button(tableFrame, 
+                            image = bbt_11, 
                             bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
                             command = lambda: [whenClicked(11), update_table(11)] )
             table11.place(relx = 0.09, rely = 0.6)
 
-            table12 = tk.Button(tableFrame, 
-                            image = t_12, 
+            if stds[11][0] == "AVAILABLE":
+                table12 = tk.Button(tableFrame, 
+                                image = t_12, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(12), update_table(12)] )
+            else:
+                table12 = tk.Button(tableFrame, 
+                            image = bbt_12, 
                             bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
                             command = lambda: [whenClicked(12), update_table(12)] )
             table12.place(relx = 0.34, rely = 0.6)
 
-            table13 = tk.Button(tableFrame, 
-                            image = t_13, 
-                            bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
-                            command = lambda: [whenClicked(13), update_table(13)] )
+            if stds[12][0] == "AVAILABLE":
+                table13 = tk.Button(tableFrame, 
+                                image = t_13, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(13), update_table(13)] )
+            else:
+                table13 = tk.Button(tableFrame, 
+                                image = bbt_13, 
+                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                command = lambda: [whenClicked(13), update_table(13)] )
             table13.place(relx = 0.6, rely = 0.6)
-
 
             nextP = tk.Button(tableFrame, 
                             image = t_next, 
@@ -437,28 +668,52 @@ def tables():
             for widget in tableFrame.winfo_children():
                 widget.destroy()
 
-            table14 = tk.Button(tableFrame, 
-                                image = t_14, 
-                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
-                                command = lambda: [whenClicked(14), update_table(14)] )
+            if stds[13][0] == "AVAILABLE":
+                table14 = tk.Button(tableFrame, 
+                                    image = t_14, 
+                                    bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                    command = lambda: [whenClicked(14), update_table(14)] )
+            else:
+                table14 = tk.Button(tableFrame, 
+                                    image = bbt_14, 
+                                    bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                    command = lambda: [whenClicked(14), update_table(14)] )
             table14.place(relx = 0.075, rely = 0)
 
-            table15 = tk.Button(tableFrame, 
-                                image = t_15, 
-                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
-                                command = lambda: [whenClicked(15), update_table(15)] )
+            if stds[14][0] == "AVAILABLE":
+                table15 = tk.Button(tableFrame, 
+                                    image = t_15, 
+                                    bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                    command = lambda: [whenClicked(15), update_table(15)] )
+            else:
+                table15 = tk.Button(tableFrame, 
+                                    image = bbt_15, 
+                                    bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                    command = lambda: [whenClicked(15), update_table(15)] )
             table15.place(relx = 0.5, rely = 0)
 
-            table16 = tk.Button(tableFrame, 
-                                image = t_16, 
-                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
-                                command = lambda: [whenClicked(16), update_table(16)] )
+            if stds[15][0] == "AVAILABLE":
+                table16 = tk.Button(tableFrame, 
+                                    image = t_16, 
+                                    bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                    command = lambda: [whenClicked(16), update_table(16)] )
+            else:
+                table16 = tk.Button(tableFrame, 
+                                    image = bbt_16, 
+                                    bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                    command = lambda: [whenClicked(16), update_table(16)] )
             table16.place(relx = 0.075, rely = 0.5)
 
-            table17 = tk.Button(tableFrame, 
-                                image = t_17, 
-                                bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
-                                command = lambda: [whenClicked(17), update_table(17)] )
+            if stds[16][0] == "AVAILABLE":
+                table17 = tk.Button(tableFrame, 
+                                    image = t_17, 
+                                    bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                    command = lambda: [whenClicked(17), update_table(17)] )
+            else:
+                table17 = tk.Button(tableFrame, 
+                                    image = bbt_17, 
+                                    bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
+                                    command = lambda: [whenClicked(17), update_table(17)] )
             table17.place(relx = 0.5, rely = 0.5)
 
             backP = tk.Button(tableFrame, 
@@ -913,11 +1168,60 @@ def orderHub():
     v = tk.StringVar()
     v.set(f"Table {sexysexyOrderNum}'s Order:")
 
-    items = tk.StringVar()
+    wifeBeater = tk.StringVar()
+    wifeBeater.set(f"Total:")
+
+    def append_to_var(newLine):
+        global plumpItems
+        current_value = plumpItems
+        new_value = current_value + f"\n{newLine}"
+        plumpItems = new_value
+
+    # sexysexyOrderNum
+    back_button = tk.Button(order, 
+                            image=backButt, 
+                            bg="#FF88A9", 
+                            highlightthickness = 0, bd = 0, 
+                            command= lambda: [waiter_hompage(), order.withdraw()])
+    back_button.place(relx=0.04, rely=0.06, anchor= 'center')
+    header = tk.Label(order, 
+                      textvariable=v,
+                      font=("Inter", 40, "bold"), 
+                      bg="#FF88A9", fg="white")
+    header.place(relx = 0.07, rely = 0.03)
+
+
+    canvas = tk.Canvas(order, 
+                       bg="#FF88A9",
+                       width=663, height=708,
+                       highlightthickness=0,
+                       scrollregion=(0,0,1000,900))
+    canvas.place(relx = 0.008, rely = 0.145)
+    
+    vbar=ttk.Scrollbar(order, orient="vertical", command=canvas.yview)
+    vbar.place(relx = 0.463, rely = 0.145, relheight=0.789)
+
+    canvas.configure(yscrollcommand=vbar.set)
+
+    def poop():
+        global plumpItems
+
+        plumpItems = ""
+
+        canvas.delete('all') 
+        canvas.create_text(50, 50, 
+                       text="",
+                       font=("Inter", 30), 
+                       anchor='nw', 
+                       fill="white")        
 
     def changeOrder(up):
         global sexysexyOrderNum
         global sexysexyOrder
+        global plumpItems
+        global wholeAhhPrice
+
+        poop()
 
         if up == "add":
             sexysexyOrderNum = listofOrders[sexysexyOrder]
@@ -937,57 +1241,28 @@ def orderHub():
                 sexysexyOrder = len(listofOrders)-1
         
         title = f"Table{sexysexyOrderNum}.txt"
-
-        actualOrders = tk.StringVar()
+        orderInfo = []
         with open(f"{title}", "r") as file:
-            start = csv.reader(file)
-            orderInfo = []
+            start = csv.reader(file)  
             for rows in start:
-                if "AM" in rows or "PM" in rows:
-                    pass
-                else:
-                    orderInfo.append(rows)
-                    print(orderInfo)
-                    actualOrders.set(f"Table {sexysexyOrderNum}'s Order:")
+                for infoInRows in rows:
+                    if "AM" in infoInRows or "PM" in infoInRows:
+                        pass
+                    else:
+                        orderInfo.append(rows)
+                        print(orderInfo)
+                        break
+        for i in range(0,len(orderInfo)):
+            newLine = translate_order(orderInfo[i])
+            append_to_var(newLine)
+            canvas.create_text(50, 50, 
+                       text=plumpItems,
+                       font=("Inter", 30), 
+                       anchor='nw', 
+                       fill="white")
 
-            
-                
-                
-                
-        """
-        
-        conn = sqlite3.connect("z_items.db")
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM items WHERE item_id = ?", (itemNum,))
-
-
-    
-        result = cursor.fetchone()
-
-        
-
-        total = result[3]*quant
-
-        '''newInfo = [ sexysexyOrderNum, itemNum, quant, total ]'''
-
-        with open(f"{titke}", "a", newline='') as file:
-            start = csv.writer(file)
-            start.writerow(newInfo)
-
-        
-        items.set(f"Table {sexysexyOrderNum}'s Order:")"""
-    # sexysexyOrderNum
-    back_button = tk.Button(order, 
-                            image=backButt, 
-                            bg="#FF88A9", 
-                            highlightthickness = 0, bd = 0, 
-                            command= lambda: [waiter_hompage(), order.withdraw()])
-    back_button.place(relx=0.04, rely=0.06, anchor= 'center')
-    header = tk.Label(order, 
-                      textvariable=v,
-                      font=("Inter", 40, "bold"), 
-                      bg="#FF88A9", fg="white")
-    header.place(relx = 0.07, rely = 0.03)
+        wholeAhhPrice = find_total(orderInfo)
+        wifeBeater.set(f"Total: ${wholeAhhPrice}")
 
     bck = tk.Button(order, 
                     image=o_prev,
@@ -1004,29 +1279,8 @@ def orderHub():
                     command = lambda: [changeOrder("add")])
     nxt.place(relx = 0.41, rely = 0.09)
 
-
-    canvas = tk.Canvas(order, 
-                       bg="#FF88A9",
-                       width=663, height=708,
-                       highlightthickness=0,
-                       scrollregion=(0,0,900,900))
-    canvas.place(relx = 0.008, rely = 0.145)
-    
-    vbar=ttk.Scrollbar(order, orient="vertical", command=canvas.yview)
-    vbar.place(relx = 0.463, rely = 0.145, relheight=0.789)
-
-    canvas.configure(yscrollcommand=vbar.set)
-    
-
-    canvas.create_text(50, 50, 
-                       text="ITEMyItem\nITEMyItem\nITEMyItem\nITEMyItem\nITEMyItem\nITEMyItem\nITEMyItem\nITEMyItem\nITEMyItem\nITEMyItem\nITEMyItem\nITEMyItem\nITEMyItem\nITEMyItem\nITEMyItem\nITEMyItem\n", 
-                       font=("Inter", 30), 
-                       anchor='nw', 
-                       fill="white")
-
-
     total = tk.Label(order, 
-                      text=f"Total: $0.00",
+                      textvariable=wifeBeater,
                       font=("Inter", 40, "bold"), 
                       bg="#FF88A9", fg="white")
     total.place(relx = 0.68, rely = 0.12)
@@ -1042,14 +1296,14 @@ def orderHub():
                      image=o_cash,
                      bg="#FF88A9", 
                      highlightthickness=0, takefocus=0, bd=0, 
-                     command = lambda: [tips(), order.withdraw()])
+                     command = lambda: [purchaseComplete(), order.withdraw(), finishing_order(sexysexyOrderNum, 2)])
     cash.place(relx = 0.63, rely = 0.42)
 
     hold = tk.Button(order, 
                      image=o_hold,
                      bg="#FF88A9", 
                      highlightthickness=0, takefocus=0, bd=0, 
-                     command = lambda: [tips(), order.withdraw()])
+                     command = lambda: [menuHub(), order.withdraw()])
     hold.place(relx = 0.63, rely = 0.62)
 
 def tips():
@@ -1068,33 +1322,33 @@ def tips():
                       image = ttt_15, 
                       bg="white", 
                       highlightthickness=0, takefocus=0, bd=0, 
-                      command = lambda: [purchaseComplete(), tips.withdraw()])
+                      command = lambda: [purchaseComplete(), tips.withdraw(), finishing_order(sexysexyOrderNum, 1)])
     tt_15.place(relx = 0.2, rely = 0.3)
     tt_20 = tk.Button(tips, 
                       image = ttt_20, 
                       bg="white", 
                       highlightthickness=0, takefocus=0, bd=0, 
-                      command = lambda: [purchaseComplete(), tips.withdraw()])
+                      command = lambda: [purchaseComplete(), tips.withdraw(), finishing_order(sexysexyOrderNum, 1)])
     tt_20.place(relx = 0.4, rely = 0.3)
     tt_25 = tk.Button(tips, 
                       image = ttt_25, 
                       bg="white", 
                       highlightthickness=0, takefocus=0, bd=0, 
-                      command = lambda: [purchaseComplete(), tips.withdraw()])
+                      command = lambda: [purchaseComplete(), tips.withdraw(), finishing_order(sexysexyOrderNum, 1)])
     tt_25.place(relx = 0.6, rely = 0.3)
 
     customTip = tk.Button(tips, 
                           image = t_custom, 
                           bg="white", 
                           highlightthickness=0, takefocus=0, bd=0, 
-                          command = lambda: [customTips(), tips.withdraw()])
+                          command = lambda: [customTips(), tips.withdraw(), finishing_order(sexysexyOrderNum, 1)])
     customTip.place(relx = 0.1875, rely = 0.6)
 
     noTip = tk.Button(tips, 
                       image = t_none, 
                       bg="white", 
                       highlightthickness=0, takefocus=0, bd=0, 
-                      command = lambda: [purchaseComplete(), tips.withdraw()])
+                      command = lambda: [purchaseComplete(), tips.withdraw(), finishing_order(sexysexyOrderNum, 1)])
     noTip.place(relx = 0.1875, rely = 0.775)
     
 def customTips():
@@ -1192,7 +1446,7 @@ def signInn():
         passer = pw.get()
 
         print(usus, passer)
-        conn = sqlite3.connect("z_employees.db")
+        conn = sqlite3.connect("z_resters.db")
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM employees WHERE username = ? AND password = ?", (usus, passer,))
         
@@ -1303,6 +1557,61 @@ t_14 = tk.PhotoImage(file = "table-14.png")
 t_15 = tk.PhotoImage(file = "table-15.png")
 t_16 = tk.PhotoImage(file = "table-16.png")
 t_17 = tk.PhotoImage(file = "table-17.png")
+
+bt_1 = Image.open("table-1.png").convert("RGBA")
+bt_2 = Image.open("table-2.png").convert("RGBA")
+bt_3 = Image.open("table-3.png").convert("RGBA")
+bt_4 = Image.open("table-4.png").convert("RGBA")
+bt_5 = Image.open("table-5.png").convert("RGBA")
+bt_6 = Image.open("table-6.png").convert("RGBA")
+bt_7 = Image.open("table-7.png").convert("RGBA")
+bt_8 = Image.open("table-8.png").convert("RGBA")
+bt_9 = Image.open("table-9.png").convert("RGBA")
+bt_10 = Image.open("table-10.png").convert("RGBA")
+bt_11 = Image.open("table-11.png").convert("RGBA")
+bt_12 = Image.open("table-12.png").convert("RGBA")
+bt_13 = Image.open("table-13.png").convert("RGBA")
+bt_14 = Image.open("table-14.png").convert("RGBA")
+bt_15 = Image.open("table-15.png").convert("RGBA")
+bt_16 = Image.open("table-16.png").convert("RGBA")
+bt_17 = Image.open("table-17.png").convert("RGBA")
+
+bt_1 = Image.blend(bt_1, Image.new("RGBA", bt_1.size, (0, 0, 0, 0)), 0.5)
+bt_2 = Image.blend(bt_2, Image.new("RGBA", bt_2.size, (0, 0, 0, 0)), 0.5)
+bt_3 = Image.blend(bt_3, Image.new("RGBA", bt_3.size, (0, 0, 0, 0)), 0.5)
+bt_4 = Image.blend(bt_4, Image.new("RGBA", bt_4.size, (0, 0, 0, 0)), 0.5)
+bt_5 = Image.blend(bt_5, Image.new("RGBA", bt_5.size, (0, 0, 0, 0)), 0.5)
+bt_6 = Image.blend(bt_6, Image.new("RGBA", bt_6.size, (0, 0, 0, 0)), 0.5)
+bt_7 = Image.blend(bt_7, Image.new("RGBA", bt_7.size, (0, 0, 0, 0)), 0.5)
+bt_8 = Image.blend(bt_8, Image.new("RGBA", bt_8.size, (0, 0, 0, 0)), 0.5)
+bt_9 = Image.blend(bt_9, Image.new("RGBA", bt_9.size, (0, 0, 0, 0)), 0.5)
+bt_10 = Image.blend(bt_10, Image.new("RGBA", bt_10.size, (0, 0, 0, 0)), 0.5)
+bt_11 = Image.blend(bt_11, Image.new("RGBA", bt_11.size, (0, 0, 0, 0)), 0.5)
+bt_12 = Image.blend(bt_12, Image.new("RGBA", bt_12.size, (0, 0, 0, 0)), 0.5)
+bt_13 = Image.blend(bt_13, Image.new("RGBA", bt_13.size, (0, 0, 0, 0)), 0.5)
+bt_14 = Image.blend(bt_14, Image.new("RGBA", bt_14.size, (0, 0, 0, 0)), 0.5)
+bt_15 = Image.blend(bt_15, Image.new("RGBA", bt_15.size, (0, 0, 0, 0)), 0.5)
+bt_16 = Image.blend(bt_16, Image.new("RGBA", bt_16.size, (0, 0, 0, 0)), 0.5)
+bt_17 = Image.blend(bt_17, Image.new("RGBA", bt_17.size, (0, 0, 0, 0)), 0.5)
+
+bbt_1 = ImageTk.PhotoImage(bt_1)
+bbt_2 = ImageTk.PhotoImage(bt_2)
+bbt_3 = ImageTk.PhotoImage(bt_3)
+bbt_4 = ImageTk.PhotoImage(bt_4)
+bbt_5 = ImageTk.PhotoImage(bt_5)
+bbt_6 = ImageTk.PhotoImage(bt_6)
+bbt_7 = ImageTk.PhotoImage(bt_7)
+bbt_8 = ImageTk.PhotoImage(bt_8)
+bbt_9 = ImageTk.PhotoImage(bt_9)
+bbt_10 = ImageTk.PhotoImage(bt_10)
+bbt_11 = ImageTk.PhotoImage(bt_11)
+bbt_12 = ImageTk.PhotoImage(bt_12)
+bbt_13 = ImageTk.PhotoImage(bt_13)
+bbt_14 = ImageTk.PhotoImage(bt_14)
+bbt_15 = ImageTk.PhotoImage(bt_15)
+bbt_16 = ImageTk.PhotoImage(bt_16)
+bbt_17 = ImageTk.PhotoImage(bt_17)
+
 t_next = tk.PhotoImage(file = "table-next.png")
 t_back = tk.PhotoImage(file = "table-back.png")
 t_yes = tk.PhotoImage(file = "table-yes.png")
@@ -1394,16 +1703,33 @@ pw_reset = tk.PhotoImage(file = "boss-resetButt.png")
 
 page_one = True
 
-listofOrders = []
-grades_reader=open('orders.txt', 'r')
-for row in grades_reader:
-    listofOrders = row.split()
 
-print(listofOrders, len(listofOrders))
-try:
-    sexysexyOrderNum = listofOrders[0]
-    sexysexyOrder = 0
-except:
-    print("file is empty")
+plumpItems = ""
+wholeAhhPrice = 0.0
+
+sexysexyOrderNum = 0
+sexysexyOrder = 0
+update_list_of_orders()
+
+
+with open('rev.txt', 'w') as f:
+    conn = sqlite3.connect("z_resters.db")
+    cursor = conn.cursor()
+    cursor.execute("""SELECT SUM(total) FROM receiptItems""")
+
+    item = cursor.fetchone()
+    print(item[0])
+    f.write(f"{item[0]}")
+
+    conn.commit()
+    conn.close()
+
+revenue = []
+with open('rev.txt', 'r') as grades_reader:
+    for row in grades_reader:
+        revenue = row.split()
+
+print(revenue, len(revenue))
+
 root.mainloop()
 #finished GUI at 4:57
