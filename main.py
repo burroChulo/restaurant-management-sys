@@ -712,7 +712,7 @@ def tables():
                             image = t_next, 
                             bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
                             command = changePage)
-            nextP.place(relx = 0.95, rely = 0)
+            nextP.place(relx = 0.96, rely = 0)
             
             page_one = False
         else:
@@ -897,10 +897,10 @@ def menus(typo):
         ss = tk.Label(overlayer, image=t_edit).pack()
 
         info = tk.Label(overlayer,
-                        text=f"Add to Order          :",
+                        text=f"Add to Order:",
                         font=('Didot', 48),
                         bg ="#FFE2EA", fg = "black")                
-        info.place(relx=0.225, rely=0.15)
+        info.place(relx=0.225, rely=0.2)
 
         clicked = tk.StringVar() 
         
@@ -910,18 +910,18 @@ def menus(typo):
         # Create Dropdown menu 
         drop = tk.OptionMenu(overlayer , clicked , *listofOrders)
         drop.config(font=("Didot", 48), bg ="#FFE2EA", fg = "black")
-        drop.place(relx=0.55, rely=0.15)
+        drop.place(relx=0.65, rely=0.2)
 
         q = tk.Label(overlayer,
                         text=f"Quantity:",
                         font=('Didot', 48),
                         bg ="#FFE2EA", fg = "black")                
-        q.place(relx=0.2, rely=0.25)
+        q.place(relx=0.225, rely=0.31)
         quant = tk.Entry(overlayer, 
                     width = 10, 
                     font=("Inria Sans", 25), 
                     fg="black",bg="white")
-        quant.place(relx = 0.425, rely = 0.275)
+        quant.place(relx = 0.5, rely = 0.34)
 
         yes = tk.Button(overlayer,
                         image=t_yes,
