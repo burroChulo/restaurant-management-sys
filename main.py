@@ -169,24 +169,6 @@ def find_total(wholeCryptic):
 def finishing_order(tableNum, debitOrCash):
     global revenue
 
-    orderInfo = []
-    with open(f"Table{tableNum}.txt", "r") as file:
-            start = csv.reader(file)  
-            for rows in start:
-                orderInfo.append(rows)
-    print(orderInfo)
-
-    newInfo = []
-    if debitOrCash == 1:
-        newInfo = [ "Credit/Debit" ]
-    else:
-        newInfo = [ "Cash" ]
-    
-    with open(f"Table{tableNum}.txt", "a", newline='') as file:
-            start = csv.writer(file)
-            start.writerow(newInfo)
-            pass
-
     c = sqlite3.connect("z_resters.db")
     curse = c.cursor()
     curse.execute("SELECT order_id FROM receipts ORDER BY order_id DESC LIMIT 1")
@@ -197,7 +179,46 @@ def finishing_order(tableNum, debitOrCash):
     c.commit()
     c.close()
 
-    newInfoo = (newid, orderInfo[2][0], 1, orderInfo[0][0], orderInfo[1][0], newInfo[0], "PAID")
+
+    orderInfo = []
+    with open(f"Table{tableNum}.txt", "r") as file:
+            start = csv.reader(file)  
+            for rows in start:
+                orderInfo.append(rows)
+    print(orderInfo)
+
+    shrimp = []
+    for i in range(2, len(orderInfo)):
+        shrimp.append(orderInfo[i])
+    
+    for everyRow in shrimp:
+        itemID = everyRow[1]
+        quant = everyRow[2]
+        totes = everyRow[3]
+        butt = (newid, itemID, quant, totes)
+
+        conn = sqlite3.connect("z_resters.db")
+        cursor = conn.cursor()
+        cursor.executemany("""
+                        INSERT OR IGNORE INTO receiptItems (order_id, item_id, quantity, total) 
+                        VALUES (?, ?, ?, ?)""", 
+                        [butt])
+        conn.commit()
+        conn.close()
+
+
+    newInfo = []
+    if debitOrCash == 1:
+        newInfo = [ "Credit/Debit" ]
+    else:
+        newInfo = [ "Cash" ]
+    with open(f"Table{tableNum}.txt", "a", newline='') as file:
+            start = csv.writer(file)
+            start.writerow(newInfo)
+            pass
+
+    global sexyUserId
+    newInfoo = (newid, orderInfo[2][0], sexyUserId, orderInfo[0][0], orderInfo[1][0], newInfo[0], "PAID")
     print("plop", newInfoo)
     conn = sqlite3.connect("z_resters.db")
     cursor = conn.cursor()
@@ -216,8 +237,10 @@ def finishing_order(tableNum, debitOrCash):
         cursor.execute("""SELECT SUM(total) FROM receiptItems""")
 
         item = cursor.fetchone()
-        print(item[0])
-        f.write(f"{item[0]}")
+        x = item[0]
+        rounded_x = round(x, 2)
+        print(x, rounded_x)
+        f.write(f"{rounded_x}")
 
         conn.commit()
         conn.close()
@@ -225,8 +248,8 @@ def finishing_order(tableNum, debitOrCash):
         for row in grades_reader:
             revenue = row.split()
     
+
     os.remove(f"Table{tableNum}.txt")
-    
     global sexysexyOrderNum
     global sexysexyOrder
     sexysexyOrderNum = 0
@@ -258,7 +281,7 @@ def boss_hompage():
                         image = b_revenue, 
                         bg="white", 
                         highlightthickness=0, takefocus=0, bd=0, 
-                        command = lambda: [revenue(), boss.withdraw()])
+                        command = lambda: [revenuex(), boss.withdraw()])
     rev.place(relx = 0.1, rely = 0.2)
 
     newAccount = tk.Button(boss, 
@@ -268,7 +291,7 @@ def boss_hompage():
                            command = lambda: [signUp(), boss.withdraw()])
     newAccount.place(relx = 0.55, rely = 0.2)
 
-def revenue():
+def revenuex():
     boss = tk.Toplevel(root)
     boss.geometry("1488x945")
     boss.resizable(width=False, height=False)
@@ -285,7 +308,7 @@ def revenue():
                       text="REVENUE",
                       font=('Didot', 48), 
                       bg="#ED3266", fg="white")
-    header.place(relx = 0.4, rely = 0.01)
+    header.place(relx = 0.4, rely = 0.02)
 
     canva = tk.Canvas(boss, 
                        bg="white",
@@ -298,9 +321,14 @@ def revenue():
                        font=("Didot", 36), 
                        anchor='nw', 
                        fill="black")
-    canva.create_text(250, 250, 
+    canva.create_text(370, 250, 
                        text="Total\nRevenue", 
-                       font=("Didot", 30), 
+                       font=("Didot", 35), 
+                       anchor='nw', 
+                       fill="black")
+    canva.create_text(680, 250, 
+                       text=f"${revenue[0]}", 
+                       font=("Didot", 60), 
                        anchor='nw', 
                        fill="black")
 
@@ -424,6 +452,9 @@ def host_hompage():
     host.geometry("1488x945")
     host.resizable(width=False, height=False)
     s = tk.Label(host, image=host_homepage).pack()
+
+    global page_one
+    page_one = True
 
     header = tk.Label(host, 
                       text=f"Welcome, {sexyUserFName}",
@@ -681,7 +712,7 @@ def tables():
                             image = t_next, 
                             bg="#FEB5C9", highlightthickness=0, takefocus=0, bd=0, 
                             command = changePage)
-            nextP.place(relx = 0.932, rely = 0)
+            nextP.place(relx = 0.95, rely = 0)
             
             page_one = False
         else:
@@ -884,7 +915,7 @@ def menus(typo):
         q = tk.Label(overlayer,
                         text=f"Quantity:",
                         font=('Didot', 48),
-                        bg ="#FFE2EA", fg = "white")                
+                        bg ="#FFE2EA", fg = "black")                
         q.place(relx=0.2, rely=0.25)
         quant = tk.Entry(overlayer, 
                     width = 10, 
@@ -1761,6 +1792,15 @@ with open('rev.txt', 'r') as grades_reader:
         revenue = row.split()
 
 print(revenue, len(revenue))
+
+'''
+conn = sqlite3.connect("z_resters.db")
+cursor = conn.cursor()
+cursor.execute("DELETE FROM receipts WHERE order_id >= 4")
+
+conn.commit()
+conn.close()
+'''
 
 root.mainloop()
 #finished GUI at 4:57
